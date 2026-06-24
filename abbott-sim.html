@@ -1,13 +1,460 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Abbott Stakeholder Engagement Simulation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #ffffff; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      background: #0F2138;
+      color: #FFFFFF;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── GATE SCREEN ── */
+    #gate-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 40px 20px;
+    }
+
+    .gate-card {
+      background: #1E3A5F;
+      border-radius: 12px;
+      padding: 48px 52px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .fra-logo-mark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .fra-mountain {
+      width: 44px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .fra-wordmark {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .fra-wordmark-top {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #FAFCFC;
+    }
+
+    .fra-wordmark-bottom {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      color: #A2B5C4;
+      margin-top: 2px;
+    }
+
+    .orange-rule {
+      width: 36px;
+      height: 3px;
+      background: #FBAE40;
+      border-radius: 2px;
+      margin-bottom: 10px;
+    }
+
+    .gate-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      color: #FBAE40;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .gate-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #FFFFFF;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    .gate-subtitle {
+      font-size: 14px;
+      color: #8A9BB0;
+      line-height: 1.5;
+      margin-bottom: 32px;
+    }
+
+    .field-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .field-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-wrap label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #A2B5C4;
+      letter-spacing: 0.5px;
+    }
+
+    .field-wrap input {
+      background: #0F2138;
+      border: 1.5px solid #2960B1;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #FFFFFF;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .field-wrap input::placeholder {
+      color: #4A6070;
+    }
+
+    .field-wrap input:focus {
+      border-color: #FBAE40;
+    }
+
+    .field-wrap input.error {
+      border-color: #F26B43;
+    }
+
+    .error-msg {
+      font-size: 12px;
+      color: #F26B43;
+      margin-top: -8px;
+      margin-bottom: 8px;
+      display: none;
+    }
+
+    .error-msg.visible {
+      display: block;
+    }
+
+    .begin-btn {
+      width: 100%;
+      background: #2960B1;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 6px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 8px;
+    }
+
+    .begin-btn:hover {
+      background: #1E4D85;
+    }
+
+    .begin-btn:active {
+      transform: scale(0.99);
+    }
+
+    .begin-btn:disabled {
+      background: #334455;
+      color: #8A9BB0;
+      cursor: not-allowed;
+    }
+
+    .gate-note {
+      font-size: 11.5px;
+      color: #4A6070;
+      text-align: center;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    /* ── SIM SCREEN ── */
+    #sim-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+      padding: 20px;
+    }
+
+    .sim-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .sim-greeting {
+      font-size: 13px;
+      color: #FBAE40;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .sim-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #FFFFFF;
+    }
+
+    .sim-instructions {
+      font-size: 13px;
+      color: #8A9BB0;
+      margin-top: 4px;
+    }
+
+    .widget-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── STATUS BANNER ── */
+    #status-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1E3A5F;
+      border: 1px solid #2960B1;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 13px;
+      color: #A2B5C4;
+      z-index: 1000;
+      white-space: nowrap;
+    }
+
+    #status-banner.success {
+      border-color: #33A803;
+      color: #33A803;
+    }
+
+    #status-banner.error {
+      border-color: #F26B43;
+      color: #F26B43;
+    }
   </style>
 </head>
 <body>
-  <elevenlabs-convai agent-id="agent_7601knfamjy4f1bsfcs8frvfqf10"></elevenlabs-convai>
+
+  <!-- GATE SCREEN -->
+  <div id="gate-screen">
+    <div class="gate-card">
+
+      <!-- FRA Logo -->
+      <div class="fra-logo-mark">
+        <div class="fra-wordmark">
+          <span class="fra-wordmark-top">FRONT RANGE</span>
+          <span class="fra-wordmark-bottom">ACCELERATOR</span>
+        </div>
+      </div>
+
+      <div class="orange-rule"></div>
+      <div class="gate-label">Stakeholder Engagement Simulation</div>
+      <h1 class="gate-title">Dr. Abbott</h1>
+      <p class="gate-subtitle">Before beginning, please enter your name.</p>
+
+      <div class="field-group">
+        <div class="field-wrap">
+          <label for="first-name">First Name</label>
+          <input type="text" id="first-name" placeholder="e.g. Sarah" autocomplete="given-name" />
+        </div>
+        <div class="field-wrap">
+          <label for="last-name">Last Name</label>
+          <input type="text" id="last-name" placeholder="e.g. Chen" autocomplete="family-name" />
+        </div>
+      </div>
+
+      <p class="error-msg" id="name-error">Please enter both your first and last name to continue.</p>
+
+      <button class="begin-btn" id="begin-btn" onclick="handleBegin()">Begin Simulation</button>
+
+      <p class="gate-note">Your name is used only to associate your transcript with your performance report. No other data is collected.</p>
+    </div>
+  </div>
+
+  <!-- SIM SCREEN -->
+  <div id="sim-screen">
+    <div class="sim-header">
+      <div class="sim-greeting">Good luck,</div>
+      <div class="sim-name" id="display-name"></div>
+      <div class="sim-instructions">Say "End conversation and provide feedback" when you are ready to conclude.</div>
+    </div>
+    <div class="widget-wrap">
+      <elevenlabs-convai id="el-widget" agent-id="agent_7601knfamjy4f1bsfcs8frvfqf10"></elevenlabs-convai>
+    </div>
+  </div>
+
+  <!-- Status Banner -->
+  <div id="status-banner"></div>
+
+  <!-- ElevenLabs widget script -->
   <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+
+  <script>
+    // ── CONFIG ──────────────────────────────────────────────────
+    // Replace this URL with your Google Apps Script Web App URL after deployment
+    const LOGGING_ENDPOINT = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+    // ── STATE ───────────────────────────────────────────────────
+    let learnerName = "";
+    let conversationLogged = false;
+
+    // ── GATE LOGIC ───────────────────────────────────────────────
+    function handleBegin() {
+      const first = document.getElementById("first-name").value.trim();
+      const last  = document.getElementById("last-name").value.trim();
+      const errMsg = document.getElementById("name-error");
+      const firstEl = document.getElementById("first-name");
+      const lastEl  = document.getElementById("last-name");
+
+      // Clear previous errors
+      firstEl.classList.remove("error");
+      lastEl.classList.remove("error");
+      errMsg.classList.remove("visible");
+
+      if (!first || !last) {
+        if (!first) firstEl.classList.add("error");
+        if (!last)  lastEl.classList.add("error");
+        errMsg.classList.add("visible");
+        return;
+      }
+
+      learnerName = first + " " + last;
+      sessionStorage.setItem("fra_learner_name", learnerName);
+
+      // Transition to sim screen
+      document.getElementById("gate-screen").style.display = "none";
+      document.getElementById("sim-screen").style.display = "flex";
+      document.getElementById("display-name").textContent = learnerName;
+
+      // Hook into ElevenLabs widget events
+      initWidgetListeners();
+    }
+
+    // Allow Enter key on name fields
+    document.getElementById("first-name").addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("last-name").focus();
+    });
+    document.getElementById("last-name").addEventListener("keydown", e => {
+      if (e.key === "Enter") handleBegin();
+    });
+
+    // ── WIDGET LISTENERS ─────────────────────────────────────────
+    function initWidgetListeners() {
+      const widget = document.getElementById("el-widget");
+
+      // Widget loads asynchronously -- poll until it is ready
+      const poll = setInterval(() => {
+        if (widget && typeof widget.addEventListener === "function") {
+          clearInterval(poll);
+          attachEvents(widget);
+        }
+      }, 300);
+    }
+
+    function attachEvents(widget) {
+      widget.addEventListener("conversationStarted", () => {
+        console.log("[FRA] Conversation started for:", learnerName);
+      });
+
+      widget.addEventListener("conversationEnded", () => {
+        console.log("[FRA] Conversation ended for:", learnerName);
+        // Attempt to capture conversation ID from widget
+        // ElevenLabs exposes getConversationId() on the element after session ends
+        let convId = "unknown";
+        try {
+          if (typeof widget.getConversationId === "function") {
+            convId = widget.getConversationId() || "unknown";
+          }
+        } catch(e) {
+          console.warn("[FRA] Could not retrieve conversation ID:", e);
+        }
+
+        if (!conversationLogged) {
+          conversationLogged = true;
+          logSession(learnerName, convId);
+        }
+      });
+    }
+
+    // ── LOGGING ──────────────────────────────────────────────────
+    function logSession(name, convId) {
+      const payload = {
+        name:            name,
+        conversation_id: convId,
+        timestamp:       new Date().toISOString(),
+        user_agent:      navigator.userAgent.substring(0, 120)
+      };
+
+      console.log("[FRA] Logging session:", payload);
+      showBanner("Saving session record...", "");
+
+      if (!LOGGING_ENDPOINT || LOGGING_ENDPOINT === "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
+        console.warn("[FRA] No logging endpoint configured. Session data (copy for manual entry):", JSON.stringify(payload));
+        showBanner("Session complete. (Logging endpoint not yet configured.)", "");
+        return;
+      }
+
+      fetch(LOGGING_ENDPOINT, {
+        method: "POST",
+        mode: "no-cors",   // Apps Script requires no-cors from external origins
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        showBanner("Session recorded successfully.", "success");
+      })
+      .catch(err => {
+        console.error("[FRA] Logging error:", err);
+        showBanner("Session complete. Record manually: " + name + " | " + convId, "error");
+      });
+    }
+
+    function showBanner(msg, type) {
+      const banner = document.getElementById("status-banner");
+      banner.textContent = msg;
+      banner.className = type;
+      banner.style.display = "block";
+      if (type === "success") {
+        setTimeout(() => { banner.style.display = "none"; }, 5000);
+      }
+    }
+  </script>
+
 </body>
 </html>
