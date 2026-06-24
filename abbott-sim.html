@@ -328,7 +328,7 @@
   <script>
     // ── CONFIG ──────────────────────────────────────────────────
     // Replace this URL with your Google Apps Script Web App URL after deployment
-    const LOGGING_ENDPOINT = "https://script.google.com/macros/s/AKfycbxoO9in-SWgp5QyA9H9sCI0rdO-lC0JDmUdVVCYm4Qrnl9GRHWGItaILCY0PQtt52y0cQ/exec";
+    const LOGGING_ENDPOINT = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
     // ── STATE ───────────────────────────────────────────────────
     let learnerName = "";
@@ -375,41 +375,84 @@
     });
 
     // ── WIDGET LISTENERS ─────────────────────────────────────────
-    function initWidgetListeners() {
-      const widget = document.getElementById("el-widget");
+    // The ElevenLabs embed widget runs inside a Shadow DOM and does not reliably
+    // fire conversationEnded events to the parent page. Instead we use a
+    // MutationObserver to watch the entire document for the end-of-conversation
+    // text that ElevenLabs renders, and trigger logging at that moment.
 
-      // Widget loads asynchronously -- poll until it is ready
-      const poll = setInterval(() => {
-        if (widget && typeof widget.addEventListener === "function") {
-          clearInterval(poll);
-          attachEvents(widget);
-        }
-      }, 300);
+    const END_PHRASES = [
+      "you ended the conversation",
+      "conversation ended",
+      "call ended"
+    ];
+
+    function initWidgetListeners() {
+      console.log("[FRA] Watching for conversation end for:", learnerName);
+
+      // Also try native widget events as a secondary attempt
+      const widget = document.getElementById("el-widget");
+      if (widget) {
+        ["conversationEnded", "conversation-ended", "callEnded", "call-ended"].forEach(evt => {
+          widget.addEventListener(evt, () => {
+            console.log("[FRA] Native event fired:", evt);
+            handleConversationEnd(widget);
+          });
+        });
+      }
+
+      // Primary method: MutationObserver watching all DOM changes
+      startDomObserver();
     }
 
-    function attachEvents(widget) {
-      widget.addEventListener("conversationStarted", () => {
-        console.log("[FRA] Conversation started for:", learnerName);
-      });
+    function startDomObserver() {
+      const observer = new MutationObserver(() => {
+        if (conversationLogged) return;
 
-      widget.addEventListener("conversationEnded", () => {
-        console.log("[FRA] Conversation ended for:", learnerName);
-        // Attempt to capture conversation ID from widget
-        // ElevenLabs exposes getConversationId() on the element after session ends
-        let convId = "unknown";
-        try {
-          if (typeof widget.getConversationId === "function") {
-            convId = widget.getConversationId() || "unknown";
-          }
-        } catch(e) {
-          console.warn("[FRA] Could not retrieve conversation ID:", e);
-        }
+        const fullText = getFullPageText().toLowerCase();
+        const ended = END_PHRASES.some(phrase => fullText.includes(phrase));
 
-        if (!conversationLogged) {
-          conversationLogged = true;
-          logSession(learnerName, convId);
+        if (ended) {
+          console.log("[FRA] End phrase detected in DOM for:", learnerName);
+          const widget = document.getElementById("el-widget");
+          handleConversationEnd(widget);
         }
       });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+
+      console.log("[FRA] DOM observer active.");
+    }
+
+    function getFullPageText() {
+      function getText(root) {
+        let text = root.innerText || root.textContent || "";
+        const shadows = Array.from(root.querySelectorAll("*"))
+          .filter(el => el.shadowRoot)
+          .map(el => getText(el.shadowRoot));
+        return text + shadows.join(" ");
+      }
+      return getText(document.body);
+    }
+
+    function handleConversationEnd(widget) {
+      if (conversationLogged) return;
+      conversationLogged = true;
+
+      let convId = "unknown";
+      try {
+        if (widget && typeof widget.getConversationId === "function") {
+          convId = widget.getConversationId() || "unknown";
+        }
+      } catch(e) {
+        console.warn("[FRA] Could not get conversation ID:", e);
+      }
+
+      console.log("[FRA] Conversation ended for:", learnerName, "| Conv ID:", convId);
+      logSession(learnerName, convId);
     }
 
     // ── LOGGING ──────────────────────────────────────────────────
