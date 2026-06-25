@@ -328,7 +328,7 @@
   <script>
     // ── CONFIG ──────────────────────────────────────────────────
     // Replace this URL with your Google Apps Script Web App URL after deployment
-    const LOGGING_ENDPOINT = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const LOGGING_ENDPOINT = "https://script.google.com/macros/s/AKfycbxoO9in-SWgp5QyA9H9sCI0rdO-lC0JDmUdVVCYm4Qrnl9GRHWGItaILCY0PQtt52y0cQ/exec";
 
     // ── STATE ───────────────────────────────────────────────────
     let learnerName = "";
@@ -510,12 +510,6 @@
 
       console.log("[FRA] Logging session:", payload);
       showBanner("Saving session record...", "");
-
-      if (!LOGGING_ENDPOINT || LOGGING_ENDPOINT === "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
-        console.warn("[FRA] No logging endpoint configured. Session data (copy for manual entry):", JSON.stringify(payload));
-        showBanner("Session complete. (Logging endpoint not yet configured.)", "");
-        return;
-      }
 
       fetch(LOGGING_ENDPOINT, {
         method: "POST",
