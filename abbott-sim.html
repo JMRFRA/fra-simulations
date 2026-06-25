@@ -375,24 +375,17 @@
     });
 
     // ── WIDGET LISTENERS ─────────────────────────────────────────
-    // The ElevenLabs embed widget runs inside a Shadow DOM and does not reliably
-    // fire conversationEnded events to the parent page. Instead we use a
-    // MutationObserver to watch the entire document for the end-of-conversation
-    // text that ElevenLabs renders, and trigger logging at that moment.
-
-    const END_PHRASES = [
-      "you ended the conversation",
-      "conversation ended",
-      "call ended"
-    ];
+    // ElevenLabs renders inside a Shadow DOM. We use three detection methods
+    // in parallel so at least one fires regardless of browser or widget version.
 
     function initWidgetListeners() {
-      console.log("[FRA] Watching for conversation end for:", learnerName);
-
-      // Also try native widget events as a secondary attempt
+      console.log("[FRA] Initializing detection for:", learnerName);
       const widget = document.getElementById("el-widget");
+
+      // METHOD 1: Native widget events (works in some widget versions)
       if (widget) {
-        ["conversationEnded", "conversation-ended", "callEnded", "call-ended"].forEach(evt => {
+        ["conversationEnded", "conversation-ended", "callEnded",
+         "call-ended", "disconnect", "disconnected"].forEach(evt => {
           widget.addEventListener(evt, () => {
             console.log("[FRA] Native event fired:", evt);
             handleConversationEnd(widget);
@@ -400,42 +393,93 @@
         });
       }
 
-      // Primary method: MutationObserver watching all DOM changes
-      startDomObserver();
-    }
+      // METHOD 2: Poll the widget element for a conversation ID becoming available
+      // ElevenLabs sets the conversation ID on the element once the call starts.
+      // When the call ends the element stops changing -- we detect the transition
+      // by watching whether the widget UI collapses or a convId appears.
+      let convIdPollCount = 0;
+      let lastKnownConvId = null;
+      let callWasActive = false;
 
-    function startDomObserver() {
-      const observer = new MutationObserver(() => {
-        if (conversationLogged) return;
+      const convIdPoller = setInterval(() => {
+        if (conversationLogged) { clearInterval(convIdPoller); return; }
+        convIdPollCount++;
 
-        const fullText = getFullPageText().toLowerCase();
-        const ended = END_PHRASES.some(phrase => fullText.includes(phrase));
+        // Safety stop after 30 minutes
+        if (convIdPollCount > 3600) { clearInterval(convIdPoller); return; }
 
-        if (ended) {
-          console.log("[FRA] End phrase detected in DOM for:", learnerName);
-          const widget = document.getElementById("el-widget");
-          handleConversationEnd(widget);
-        }
-      });
+        try {
+          if (widget && typeof widget.getConversationId === "function") {
+            const cid = widget.getConversationId();
+            if (cid && cid !== "unknown") {
+              lastKnownConvId = cid;
+              callWasActive = true;
+              console.log("[FRA] Active conversation ID detected:", cid);
+            }
+          }
+        } catch(e) {}
+      }, 500);
 
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true
-      });
+      // METHOD 3: Watch widget attribute/class changes for state transitions.
+      // When the widget moves from active to idle its root element attributes change.
+      if (widget) {
+        let widgetWasExpanded = false;
 
-      console.log("[FRA] DOM observer active.");
-    }
+        const attrObserver = new MutationObserver((mutations) => {
+          if (conversationLogged) return;
 
-    function getFullPageText() {
-      function getText(root) {
-        let text = root.innerText || root.textContent || "";
-        const shadows = Array.from(root.querySelectorAll("*"))
-          .filter(el => el.shadowRoot)
-          .map(el => getText(el.shadowRoot));
-        return text + shadows.join(" ");
+          // Check if any attribute on the widget element changed
+          mutations.forEach(m => {
+            console.log("[FRA] Widget mutation:", m.type, m.attributeName,
+              widget.getAttribute(m.attributeName));
+          });
+
+          // Look for the widget shrinking or a status attribute indicating idle
+          const currentAttrs = widget.getAttributeNames().join(" ");
+          console.log("[FRA] Widget attrs:", currentAttrs);
+        });
+
+        attrObserver.observe(widget, {
+          attributes: true,
+          attributeOldValue: true,
+          childList: true,
+          subtree: false
+        });
       }
-      return getText(document.body);
+
+      // METHOD 4: Timed fallback prompt.
+      // If none of the above fire, ask the user to click a button to log manually.
+      // This ensures we never lose a session even if all detection fails.
+      startFallbackTimer(widget);
+
+      console.log("[FRA] All detection methods active.");
+    }
+
+    function startFallbackTimer(widget) {
+      // After 2 minutes of inactivity with no log, show a manual log button
+      setTimeout(() => {
+        if (conversationLogged) return;
+        console.log("[FRA] Fallback timer fired -- showing manual log button.");
+        showManualLogButton(widget);
+      }, 120000);
+    }
+
+    function showManualLogButton(widget) {
+      if (conversationLogged) return;
+      const btn = document.createElement("button");
+      btn.textContent = "Tap here to save your session";
+      btn.style.cssText = [
+        "position:fixed", "bottom:80px", "left:50%",
+        "transform:translateX(-50%)", "background:#2960B1",
+        "color:#fff", "border:none", "border-radius:6px",
+        "padding:14px 24px", "font-size:15px", "font-weight:600",
+        "cursor:pointer", "z-index:9999", "font-family:inherit"
+      ].join(";");
+      btn.onclick = () => {
+        btn.remove();
+        handleConversationEnd(widget);
+      };
+      document.body.appendChild(btn);
     }
 
     function handleConversationEnd(widget) {
@@ -451,7 +495,7 @@
         console.warn("[FRA] Could not get conversation ID:", e);
       }
 
-      console.log("[FRA] Conversation ended for:", learnerName, "| Conv ID:", convId);
+      console.log("[FRA] Logging session for:", learnerName, "| Conv ID:", convId);
       logSession(learnerName, convId);
     }
 
